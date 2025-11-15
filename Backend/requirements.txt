@@ -1,0 +1,9 @@
+pdfplumber
+python-docx
+spacy
+fastapi
+uvicorn
+regex
+python-multipart
+
+
