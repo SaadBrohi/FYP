@@ -12,6 +12,9 @@ from llm_pass_2 import infer_traits, save_traits_json
 from embedding import model, flatten_resume_json, flatten_traits_json
 from db import get_connection, release_connection
 
+# NEW: Neo4j Graph Builder
+from graph_builder import insert_candidate_graph
+
 # -------------------------
 # Setup directories
 # -------------------------
@@ -140,7 +143,7 @@ async def upload_resume(file: UploadFile = File(...)):
         ))
 
         # -------------------------
-        # FAISS → SQL Sync (Safe for duplicates)
+        # FAISS → SQL Sync
         # -------------------------
         cur.execute("""
             INSERT INTO resume_faiss_map (resume_id, faiss_index)
@@ -151,6 +154,18 @@ async def upload_resume(file: UploadFile = File(...)):
         conn.commit()
         cur.close()
         release_connection(conn)
+
+        # --------------------------------------------------------
+        # NEW: Neo4j Graph Sync (Candidate → Skills → Traits etc)
+        # --------------------------------------------------------
+        try:
+            insert_candidate_graph(
+                resume_id=resume_id,
+                structured_json=structured_json,
+                traits=trait_json
+            )
+        except Exception as neo_err:
+            print("Neo4j Sync Error:", neo_err)
 
         # 6. Final response
         return JSONResponse(
