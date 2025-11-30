@@ -2,15 +2,15 @@ import os
 import shutil
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+import json
+import numpy as np
+import faiss
 
 from resume_cleaner import clean_resume_file, save_cleaned_text
 from llm_processor import extract_structured_json, save_json_output
 from llm_pass_2 import infer_traits, save_traits_json
-
 from embedding import model, flatten_resume_json, flatten_traits_json
-import numpy as np
-import faiss
-import json
+from db import get_connection, release_connection
 
 # -------------------------
 # Setup directories
@@ -81,9 +81,7 @@ async def upload_resume(file: UploadFile = File(...)):
         resume_embedding = model.encode(resume_text)
         traits_embedding = model.encode(traits_text)
 
-        combined_embedding = np.concatenate(
-            [resume_embedding, traits_embedding]
-        ).astype('float32')
+        combined_embedding = np.concatenate([resume_embedding, traits_embedding]).astype('float32')
 
         global index, candidate_ids
 
@@ -100,6 +98,60 @@ async def upload_resume(file: UploadFile = File(...)):
         with open(CANDIDATE_IDS_PATH, 'w', encoding='utf-8') as f:
             json.dump(candidate_ids, f)
 
+        # -------------------------
+        # Save to PostgreSQL
+        # -------------------------
+        conn = get_connection()
+        cur = conn.cursor()
+
+        # Insert into resumes table
+        cur.execute("""
+            INSERT INTO resumes (name, email, phone, raw_text, cleaned_text)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            structured_json.get('name'),
+            structured_json.get('email'),
+            structured_json.get('phone'),
+            cleaned_text,
+            cleaned_text
+        ))
+        resume_id = cur.fetchone()[0]
+
+        # Insert structured JSON
+        cur.execute("""
+            INSERT INTO resume_structured (resume_id, structured_json)
+            VALUES (%s, %s)
+        """, (resume_id, json.dumps(structured_json)))
+
+        # Insert trait scores
+        cur.execute("""
+            INSERT INTO resume_traits (resume_id, leadership, communication,
+                analytical_thinking, ownership, problem_solving, attention_to_detail)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            resume_id,
+            trait_json.get('leadership'),
+            trait_json.get('communication'),
+            trait_json.get('analytical_thinking'),
+            trait_json.get('ownership'),
+            trait_json.get('problem_solving'),
+            trait_json.get('attention_to_detail')
+        ))
+
+        # -------------------------
+        # FAISS → SQL Sync (Safe for duplicates)
+        # -------------------------
+        cur.execute("""
+            INSERT INTO resume_faiss_map (resume_id, faiss_index)
+            VALUES (%s, %s)
+            ON CONFLICT (resume_id) DO NOTHING
+        """, (resume_id, len(candidate_ids) - 1))
+
+        conn.commit()
+        cur.close()
+        release_connection(conn)
+
         # 6. Final response
         return JSONResponse(
             status_code=200,
@@ -115,6 +167,9 @@ async def upload_resume(file: UploadFile = File(...)):
         )
 
     except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+            release_connection(conn)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 # -------------------------
