@@ -1,61 +1,52 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from db import get_connection, release_connection
 import json
 
 router = APIRouter()
 
-@router.get("/candidate/{candidate_id}")
-async def get_candidate_data(candidate_id: int):
+@router.get("/candidates")
+async def get_all_candidates():
     """
-    Fetch structured JSON + trait scores for a specific candidate.
+    Fetch all candidates' structured JSON + traits from the database.
     """
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        # Structured JSON
+        # Fetch all candidate IDs + structured JSON
         cur.execute("""
-            SELECT structured_json
-            FROM resume_structured
-            WHERE resume_id = %s
-        """, (candidate_id,))
-        structured_row = cur.fetchone()
-        if not structured_row:
-            raise HTTPException(status_code=404, detail="Candidate not found")
-        structured_json = structured_row[0]
+            SELECT r.id, rs.structured_json, rt.leadership, rt.communication,
+                   rt.analytical_thinking, rt.ownership, rt.problem_solving, rt.attention_to_detail
+            FROM resumes r
+            JOIN resume_structured rs ON r.id = rs.resume_id
+            LEFT JOIN resume_traits rt ON r.id = rt.resume_id
+        """)
+        rows = cur.fetchall()
 
-        # Trait scores
-        cur.execute("""
-            SELECT leadership, communication, analytical_thinking,
-                   ownership, problem_solving, attention_to_detail
-            FROM resume_traits
-            WHERE resume_id = %s
-        """, (candidate_id,))
-        traits_row = cur.fetchone()
-        traits_json = {
-            "leadership": traits_row[0],
-            "communication": traits_row[1],
-            "analytical_thinking": traits_row[2],
-            "ownership": traits_row[3],
-            "problem_solving": traits_row[4],
-            "attention_to_detail": traits_row[5]
-        } if traits_row else {}
+        candidates = []
+        for row in rows:
+            candidate_id = row[0]
+            structured_json = row[1]
+            traits_json = {
+                "leadership": row[2],
+                "communication": row[3],
+                "analytical_thinking": row[4],
+                "ownership": row[5],
+                "problem_solving": row[6],
+                "attention_to_detail": row[7]
+            }
+            candidates.append({
+                "candidate_id": candidate_id,
+                "structured_json": structured_json,
+                "traits": traits_json
+            })
 
         cur.close()
         release_connection(conn)
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "candidate_id": candidate_id,
-                "structured_json": structured_json,
-                "traits": traits_json
-            }
-        )
+        return JSONResponse(status_code=200, content=candidates)
 
-    except HTTPException as e:
-        raise e
     except Exception as e:
         if 'conn' in locals():
             release_connection(conn)
