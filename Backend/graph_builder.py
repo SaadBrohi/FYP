@@ -1,82 +1,100 @@
 # graph_builder.py
 from neo4j_client import neo4j_client
+import logging
 
-def insert_candidate_graph(resume_id, structured_json, traits):
+def insert_candidate_graph(resume_id: int, structured_json: dict, traits: dict):
+    """
+    Insert candidate data into Neo4j graph.
+    Uses MERGE to avoid duplicates.
+    """
+    try:
+        candidate_id = str(resume_id)
+        name = structured_json.get("name", "Unknown")
 
-    # --- Candidate ---
-    name = structured_json.get("name", "Unknown")
-    neo4j_client.run("""
-        MERGE (c:Candidate {id: $id})
-        SET c.name = $name
-    """, {"id": str(resume_id), "name": name})
-
-    # --- Skills ---
-    raw_skills = structured_json.get("skills", [])
-    skills_list = []
-
-    for entry in raw_skills:
-        # Check if entry is a comma-separated string
-        if isinstance(entry, str):
-            # Remove category prefix if present (e.g., "Programming: Python, C")
-            if ":" in entry:
-                entry = entry.split(":", 1)[1]
-            # Split by commas
-            split_skills = [s.strip() for s in entry.split(",") if s.strip()]
-            skills_list.extend(split_skills)
-        else:
-            # If already a list, just add
-            skills_list.append(entry)
-
-    # Insert skills into Neo4j
-    for skill in skills_list:
+        # --- Candidate Node ---
         neo4j_client.run("""
-            MERGE (s:Skill {name: $skill})
-            MERGE (c:Candidate {id: $id})-[:HAS_SKILL]->(s)
-        """, {"skill": skill, "id": str(resume_id)})
+            MERGE (c:Candidate {id: $id})
+            SET c.name = $name,
+                c.updated_at = datetime()
+        """, {"id": candidate_id, "name": name})
 
-    # --- Experience ---
-    for exp in structured_json.get("experience", []):
-        company = exp.get("company")
-        role = exp.get("job_title", "")  # corrected key from 'role' to 'job_title'
+        # --- Skills ---
+        raw_skills = structured_json.get("skills", [])
+        skills_list = []
 
-        if not company:
-            continue
+        for entry in raw_skills:
+            if isinstance(entry, str):
+                # Handle "Category: skill1, skill2"
+                if ":" in entry:
+                    entry = entry.split(":", 1)[1].strip()
+                # Split by comma
+                split_skills = [s.strip() for s in entry.split(",") if s.strip()]
+                skills_list.extend(split_skills)
+            elif isinstance(entry, (list, tuple)):
+                skills_list.extend([str(s).strip() for s in entry if s])
+            else:
+                # Single item
+                skills_list.append(str(entry).strip())
 
-        neo4j_client.run("""
-            MERGE (cmp:Company {name: $company})
-            MERGE (r:Role {name: $role})
-            MERGE (c:Candidate {id: $id})-[:WORKED_AT]->(cmp)
-            MERGE (c)-[:PERFORMED_ROLE]->(r)
-        """, {
-            "company": company,
-            "role": role,
-            "id": str(resume_id)
-        })
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_skills = [skill for skill in skills_list if skill and not (skill in seen or seen.add(skill))]
 
-    # --- Education ---
-    for edu in structured_json.get("education", []):
-        inst = edu.get("institution")
-        degree = edu.get("degree", "")
+        for skill in unique_skills:
+            neo4j_client.run("""
+                MERGE (s:Skill {name: $skill})
+                MERGE (c:Candidate {id: $id})-[:HAS_SKILL]->(s)
+            """, {"skill": skill, "id": candidate_id})
 
-        if not inst:
-            continue
+        # --- Experience ---
+        for exp in structured_json.get("experience", []):
+            company = exp.get("company")
+            job_title = exp.get("job_title") or exp.get("role", "")
 
-        neo4j_client.run("""
-            MERGE (e:Education {institution: $inst, degree: $degree})
-            MERGE (c:Candidate {id: $id})-[:HAS_EDUCATION]->(e)
-        """, {
-            "inst": inst,
-            "degree": degree,
-            "id": str(resume_id)
-        })
+            if not company:
+                continue
 
-    # --- Traits ---
-    for trait_name, score in traits.items():
-        neo4j_client.run("""
-            MERGE (t:Trait {name: $trait})
-            MERGE (c:Candidate {id: $id})-[:EXHIBITS {score: $score}]->(t)
-        """, {
-            "trait": trait_name,
-            "score": float(score),
-            "id": str(resume_id)
-        })
+            neo4j_client.run("""
+                MERGE (cmp:Company {name: $company})
+                MERGE (r:Role {name: $role})
+                MERGE (c:Candidate {id: $id})-[:WORKED_AT]->(cmp)
+                MERGE (c)-[:PERFORMED_ROLE]->(r)
+            """, {
+                "company": company,
+                "role": job_title,
+                "id": candidate_id
+            })
+
+        # --- Education ---
+        for edu in structured_json.get("education", []):
+            institution = edu.get("institution")
+            degree = edu.get("degree", "")
+
+            if not institution:
+                continue
+
+            neo4j_client.run("""
+                MERGE (e:Education {institution: $inst, degree: $degree})
+                MERGE (c:Candidate {id: $id})-[:HAS_EDUCATION]->(e)
+            """, {
+                "inst": institution,
+                "degree": degree,
+                "id": candidate_id
+            })
+
+        # --- Traits ---
+        for trait_name, score in traits.items():
+            neo4j_client.run("""
+                MERGE (t:Trait {name: $trait})
+                MERGE (c:Candidate {id: $id})-[:EXHIBITS {score: $score}]->(t)
+            """, {
+                "trait": trait_name,
+                "score": float(score),
+                "id": candidate_id
+            })
+
+        logging.info(f"Successfully inserted candidate {resume_id} into Neo4j graph")
+
+    except Exception as e:
+        logging.error(f"Error inserting candidate {resume_id} into Neo4j: {e}")
+        raise

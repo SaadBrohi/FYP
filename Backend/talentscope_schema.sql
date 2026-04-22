@@ -34,3 +34,10 @@ CREATE TABLE resume_faiss_map (
     faiss_index INT UNIQUE,
     PRIMARY KEY (resume_id)
 );
+
+CREATE TABLE jobs (
+    job_id SERIAL PRIMARY KEY,
+    title TEXT,
+    description TEXT,
+    skills TEXT[]
+);

@@ -1,0 +1,42 @@
+Syed Umer Razi
+Karachi, Pakistan syedumer763@gmail.com 92 323 270 5149 LinkedIn GitHub
+Education
+FAST NUCES Jun 2026
+Bachelor of Science in Computer Science Karachi
+CGPA: 3.47 / 4.00 Dean s List (4 )
+Relevant Coursework: Artificial Intelligence, Deep Learning, Computer Vision, Applied DevOps
+Experience
+AI Developer Appalo Jul 2025 Sep 2025
+ Built a Slack based attendance automation system used for real time tracking and reporting.
+ Implemented GitHub and LinkedIn OAuth authentication and improved backend reliability through test coverage.
+AI Research Team The Bridge of Hopes Jun 2025 Aug 2025
+ Developed datasets and evaluation tools for Vision Question Generation (VQG) models.
+Teaching Assistant FAST NUCES Semester 5
+ Assisted students with programming labs and debugging sessions.
+Projects
+AI Powered Test Generation with LLMs MLOps
+ Built an LLM driven test generation pipeline using LLaMA 3.3 70B (Groq API), achieving 90 pass rate on first
+generation.
+ Designed structured prompts and evaluation logic to improve output reliability.
+ Implemented a 7 service MLOps stack: MLflow, Prometheus, Grafana, PostgreSQL, Docker.
+ Deployed on AWS EC2 with artifact storage in S3 and real time experiment monitoring.
+Intelligent Feedback Analysis System (LLM Pipeline)
+ Developed a multi stage LLM workflow (classification analytics report generation) using LLaMA 3.3 70B.
+ Structured retrieval of categorized feedback to improve grounding in generated reports.
+ Integrated Faster Whisper (int8) for speech to text with asynchronous processing.
+Autonomous Research Paper Explainer Agent (LangChain RAG)
+ Built an agentic system using LangChain to process research papers and generate structured explanations.
+ Implemented a Retrieval Augmented Generation (RAG) pipeline for extracting relevant sections (methodology,
+experiments) to ground responses.
+ Designed multi step prompting workflows for extraction, summarization, and simplified explanations.
+NER for Karachi Location Validation
+ Built a BERT based NER model with a T5 rewriting module, achieving 92 F1 score.
+Vision Question Generation (Multimodal Research)
+ Generated 10k multimodal samples and evaluated Transformer based models using BLEU and METEOR.
+Technical Skills Certifications
+Languages ML: Python, C , TensorFlow, Scikit learn
+LLMs Agents: LLaMA,Transformers,BERT,ViT,GroqAPI,LangChain, Agentic AI DeepLearning.AI
+Prompt Engineering, RAG Supervised ML Coursera
+Backend Deployment: FastAPI, Docker, MLflow, GitHub Actions, CNNs Coursera
+CI/CD AI Engineer Associate Udemy
+Infra Databases: AWS(EC2,S3),SQL,Linux,Git,Prometheus,Grafana

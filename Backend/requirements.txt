@@ -7,5 +7,9 @@ regex
 python-multipart
 langchain>=0.2.0
 langchain-community>=0.2.0
-
-
+faiss-cpu
+langchain-ollama
+langchain-groq
+numpy
+python-dotenv
+neo4j 

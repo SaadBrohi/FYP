@@ -1,8 +1,17 @@
 {
+<<<<<<< HEAD
+    "leadership": 0.2,
+    "communication": 0.6,
+    "analytical_thinking": 0.8,
+    "ownership": 0.7,
+    "problem_solving": 0.9,
+    "attention_to_detail": 0.8
+=======
     "leadership": 0.6,
     "communication": 0.7,
     "analytical_thinking": 0.85,
     "ownership": 0.8,
     "problem_solving": 0.9,
     "attention_to_detail": 0.75
+>>>>>>> eb03ea49cff637991ddc3970c5cecb046ddff528
 }

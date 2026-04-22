@@ -1,0 +1,56 @@
+{
+    "name": "Syed Umer Razi",
+    "email": "syedumer763@gmail.com",
+    "phone": "92 323 270 5149",
+    "education": [
+        {
+            "degree": "Bachelor of Science in Computer Science",
+            "institution": "FAST NUCES",
+            "start_year": "Jun 2026",
+            "end_year": ""
+        }
+    ],
+    "experience": [
+        {
+            "job_title": "AI Developer",
+            "company": "Appalo",
+            "start_year": "Jul 2025",
+            "end_year": "Sep 2025",
+            "description": "Built a Slack based attendance automation system used for real time tracking and reporting. Implemented GitHub and LinkedIn OAuth authentication and improved backend reliability through test coverage."
+        },
+        {
+            "job_title": "AI Research Team Member",
+            "company": "The Bridge of Hopes",
+            "start_year": "Jun 2025",
+            "end_year": "Aug 2025",
+            "description": "Developed datasets and evaluation tools for Vision Question Generation (VQG) models."
+        },
+        {
+            "job_title": "Teaching Assistant",
+            "company": "FAST NUCES",
+            "start_year": "Semester 5",
+            "end_year": "",
+            "description": "Assisted students with programming labs and debugging sessions."
+        }
+    ],
+    "skills": [
+        "ML: Python, C , TensorFlow, Scikit learn",
+        "LLMs Agents: LLaMA,Transformers,BERT,ViT,GroqAPI,LangChain, Agentic AI",
+        "Prompt Engineering, RAG",
+        "Supervised ML Coursera",
+        "Backend Deployment: FastAPI, Docker, MLflow, GitHub Actions, CNNs Coursera",
+        "CI/CD AI Engineer Associate Udemy",
+        "Infra Databases: AWS(EC2,S3),SQL,Linux,Git,Prometheus,Grafana"
+    ],
+    "projects": [
+        "AI Powered Test Generation with LLMs MLOps",
+        "Intelligent Feedback Analysis System (LLM Pipeline)",
+        "Autonomous Research Paper Explainer Agent (LangChain RAG)",
+        "NER for Karachi Location Validation",
+        "Vision Question Generation (Multimodal Research)"
+    ],
+    "certifications": [
+        "Supervised ML Coursera",
+        "CI/CD AI Engineer Associate Udemy"
+    ]
+}

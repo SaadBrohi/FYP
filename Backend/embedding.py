@@ -57,21 +57,12 @@ def add_candidate_to_index(resume_json_path, traits_json_path, candidate_name, i
     with open(resume_json_path, 'r', encoding='utf-8') as f:
         resume_json = json.load(f)
     resume_text = flatten_resume_json(resume_json)
-    resume_embedding = model.encode(resume_text)
-
-    traits_embedding = np.zeros(embedding_dim)
-    if os.path.exists(traits_json_path):
-        with open(traits_json_path, 'r', encoding='utf-8') as f:
-            traits_json = json.load(f)
-        traits_text = flatten_traits_json(traits_json)
-        traits_embedding = model.encode(traits_text)
-
-    combined_embedding = np.concatenate([resume_embedding, traits_embedding]).astype('float32')
+    resume_embedding = model.encode(resume_text).astype('float32')
 
     if index_path and os.path.exists(index_path):
         index = faiss.read_index(index_path)
     else:
-        index = faiss.IndexFlatL2(len(combined_embedding))
+        index = faiss.IndexFlatL2(len(resume_embedding))
 
     if candidate_ids_path and os.path.exists(candidate_ids_path):
         with open(candidate_ids_path, 'r', encoding='utf-8') as f:
@@ -79,7 +70,7 @@ def add_candidate_to_index(resume_json_path, traits_json_path, candidate_name, i
     else:
         candidate_ids = []
 
-    index.add(np.expand_dims(combined_embedding, axis=0))
+    index.add(np.expand_dims(resume_embedding, axis=0))
     candidate_ids.append(candidate_name)
 
     if index_path:

@@ -1,7 +1,11 @@
 import os
 import json
 import logging
-from langchain_ollama import OllamaLLM  # Updated import
+import re
+from pathlib import Path
+from dotenv import load_dotenv
+from langchain_ollama import OllamaLLM
+from langchain_groq import ChatGroq
 
 # -------------------------
 # Setup logging
@@ -25,26 +29,18 @@ def load_prompt_template(prompt_path: str) -> str:
         return f.read()
 
 # -------------------------
-# Extract structured JSON from resume text
+# Helper functions
 # -------------------------
-def extract_structured_json(cleaned_text: str, llm_model: str = "qwen2.5:7b-instruct-q5_K_M") -> dict:
-    prompt_text = load_prompt_template(PROMPT_FILE)
-    prompt_text = prompt_text.replace("{resume_text}", cleaned_text)
-
+def _parse_response_text(response_text: str) -> dict:
+    """Strip markdown fences and parse JSON from LLM response."""
+    response_text = re.sub(r'^```json|```$', '', response_text.strip(), flags=re.MULTILINE).strip()
     try:
-        logging.info("Calling LLM model: %s", llm_model)
-        llm = OllamaLLM(model=llm_model, temperature=0)
-        response = llm.generate([prompt_text])
-        response_text = response.generations[0][0].text
-        logging.info("LLM response received (first 500 chars): %s", response_text[:500])
-
         return json.loads(response_text)
-
     except json.JSONDecodeError:
-        logging.warning("Failed to parse LLM output as JSON, returning empty structure.")
-    except Exception as e:
-        logging.error("LLM call failed: %s", str(e))
+        logging.warning("Failed to parse LLM output as JSON.")
+        return {}
 
+def _empty_resume_structure() -> dict:
     return {
         "name": "",
         "email": "",
@@ -55,6 +51,47 @@ def extract_structured_json(cleaned_text: str, llm_model: str = "qwen2.5:7b-inst
         "projects": [],
         "certifications": []
     }
+
+# -------------------------
+# Extract structured JSON from resume text
+# -------------------------
+GROQ_MODEL = "llama-3.3-70b-versatile"
+
+def extract_structured_json(cleaned_text: str, llm_model: str = "qwen2.5:7b-instruct-q5_K_M") -> dict:
+    prompt_text = load_prompt_template(PROMPT_FILE)
+    prompt_text = prompt_text.replace("{resume_text}", cleaned_text)
+
+    # ── Try Ollama first ──────────────────────────────────────────────────────
+    try:
+        logging.info("Attempting Ollama model: %s", llm_model)
+        llm = OllamaLLM(model=llm_model, temperature=0, timeout=30)
+        response = llm.generate([prompt_text])
+        response_text = response.generations[0][0].text
+        logging.info("Ollama response received (first 500 chars): %s", response_text[:500])
+        parsed = _parse_response_text(response_text)
+        if parsed:
+            return parsed
+    except Exception as e:
+        logging.warning("Ollama unavailable or failed (%s). Falling back to Groq API.", str(e))
+
+    # ── Fallback: Groq API ────────────────────────────────────────────────────
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    if not groq_api_key:
+        logging.error("GROQ_API_KEY environment variable is not set. Cannot use Groq fallback.")
+        return _empty_resume_structure()
+
+    try:
+        logging.info("Calling Groq API with model: %s", GROQ_MODEL)
+        groq_llm = ChatGroq(model=GROQ_MODEL, temperature=0, api_key=groq_api_key)
+        groq_response = groq_llm.invoke(prompt_text)
+        response_text = groq_response.content
+        logging.info("Groq response received (first 500 chars): %s", response_text[:500])
+        return _parse_response_text(response_text) or _empty_resume_structure()
+
+    except Exception as e:
+        logging.error("Groq API call failed: %s", str(e))
+
+    return _empty_resume_structure()
 
 
 # -------------------------
